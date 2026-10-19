@@ -30,6 +30,8 @@ El `docker-compose` usa **perfiles** para decidir qué servicios arrancan. Un se
 
 Los perfiles `inventory`, `tickets` y `store` son **sistemas autónomos**. Los perfiles `reports` y `notifications` son **complementos**: se suman a cualquier sistema y también funcionan con la plataforma base sola, aunque sin eventos que procesar. Se pueden activar varios perfiles a la vez.
 
+**La composición de `make base` crece con los hitos.** El plan de la Fase 1 construye la plataforma por partes: en el **hito 1** `make base` levanta solo **PostgreSQL y RabbitMQ**, y **Identity se añade al modo base en el hito 9**. La tabla anterior describe la Fase 1 completa; hasta el hito 9, la fila «sin perfil, siempre» son PostgreSQL y RabbitMQ.
+
 Qué existe en cada fase:
 
 | Servicio | Fase | Perfil |
@@ -48,7 +50,7 @@ Cada complemento **solo procesa los eventos que existan en el modo en que corre*
 Un perfil **decide qué servicios arrancan, pero no cambia su configuración**. Hay variables que dependen del modo (sesión compartida, integración entre sistemas), así que cada modo tiene su archivo de variables y un `Makefile` los une en un solo comando:
 
 ```text
-make base                                  # solo PostgreSQL, RabbitMQ e Identity (Fase 1)
+make base                                  # PostgreSQL y RabbitMQ (Identity se añade en el hito 9)
 make inventory                             # base + inventory
 make tickets                               # base + tickets
 make store                                 # base + store
@@ -74,6 +76,7 @@ Variables que cambian entre modos (nombres de referencia):
 
 - Todos los servicios comparten una **red interna** de Docker. Se comunican por nombre de servicio (`postgres`, `rabbitmq`, `identity`).
 - Solo se publican hacia el equipo anfitrión los puertos que un humano necesita: las APIs y frontends, y la consola web de RabbitMQ. **PostgreSQL no se publica por defecto.** Un archivo adicional de Compose lo expone en `localhost` para depuración.
+- Puertos en la plataforma base: PostgreSQL escucha en **5432** dentro de la red (nunca publicado por defecto; `compose.debug.yml` lo publica en `localhost:5432`), RabbitMQ escucha en **5672** dentro de la red y publica la consola web en **15672** (`RABBITMQ_MANAGEMENT_PORT`).
 - Cada servicio tiene un **control de salud** (*healthcheck*) y sus dependientes esperan a que esté sano antes de arrancar (`depends_on` con `condition: service_healthy`):
 
 | Servicio | Comprobación |
@@ -82,7 +85,7 @@ Variables que cambian entre modos (nombres de referencia):
 | RabbitMQ | `rabbitmq-diagnostics -q ping` |
 | Identity | Endpoint de salud propio |
 
-- Las imágenes de terceros (PostgreSQL, RabbitMQ) se fijan a una **versión mayor concreta**, nunca a `latest`.
+- Las imágenes de terceros (PostgreSQL, RabbitMQ) se fijan a una **versión mayor concreta**, nunca a `latest`. En la plataforma base: **PostgreSQL 18** (`postgres:18-alpine`) y **RabbitMQ 4.1** (`rabbitmq:4.1-management-alpine`).
 - Los datos de PostgreSQL y RabbitMQ se guardan en **volúmenes** de Docker. `make reset` los borra.
 
 ## 4. Bases de datos
@@ -100,7 +103,7 @@ Una **única instancia de PostgreSQL** con **una base de datos por servicio**.
 Reglas:
 
 - Cada base tiene su **propio usuario**, con permisos solo sobre esa base. Se retira el permiso de conexión público a todas las bases, de modo que el usuario de un servicio no puede conectarse a la base de otro.
-- Un script de inicialización crea las bases y los usuarios la **primera vez** que arranca la instancia. Lo hace aunque el perfil del servicio no esté activo: una base vacía no cuesta nada. Un servicio nuevo añade su entrada al script.
+- Un script de inicialización crea las bases y los usuarios la **primera vez** que arranca la instancia (en la plataforma base, `db/init/01-databases.sh`). Lo hace aunque el perfil del servicio no esté activo: una base vacía no cuesta nada. Un servicio nuevo añade su entrada al script.
 - Cada servicio gestiona sus **propias migraciones** y las aplica al arrancar. Es válido para demo y desarrollo; no lo sería para producción.
 - Ningún servicio lee la base de otro. La regla se mantiene en lo lógico por los usuarios separados, aunque la instancia sea compartida.
 
@@ -131,6 +134,8 @@ Publicador ──► exchange "events" (topic) ──► cola "<consumidor>.even
 | **Tipo de cola** | Duradera y de tipo *quorum*, con límite de entregas. |
 | **Mensajes** | Persistentes. El publicador espera la **confirmación del broker** (*publisher confirms*) y el consumidor confirma (*ack*) manualmente tras procesar. |
 | **Exchange `events.dlx`** | Recibe los mensajes que se rinden tras N intentos. Cada consumidor declara su cola `<consumidor>.events.dlq` enlazada a él. |
+
+La plataforma declara el usuario y los exchanges **al arrancar el broker**: `make setup` convierte la plantilla versionada `broker/definitions.template.json` en `secrets/rabbitmq-definitions.json` (con la contraseña generada) y RabbitMQ la carga al iniciarse. Así `events` existe aunque no haya ningún consumidor.
 
 Ejemplo de bindings (referencia):
 
@@ -222,7 +227,8 @@ platform/
 │   └── full.env
 ├── .env.example
 ├── db/init/                  # crea bases y usuarios
-├── broker/                   # definición de los exchanges
+├── broker/                   # plantilla de definiciones y configuración del broker
+├── scripts/                  # make setup y comprobaciones de la plataforma
 ├── secrets/                  # IGNORADO por Git; lo genera make setup
 └── docs/                     # esta documentación
 ```
@@ -259,6 +265,8 @@ Con `SEED_DEMO_DATA=false` no existe ninguna contraseña conocida: `make setup` 
 | **Servicios y sistemas** | Lint, compilación, tests unitarios y de integración (con contenedores de prueba). En la rama principal, construye la imagen de Docker y la publica en **GitHub Container Registry**, etiquetada con `latest` y con el *hash* del commit |
 | **Contratos de eventos** | Valida que cada esquema sea un esquema válido y que cada ejemplo cumpla el suyo |
 | **platform** | Valida los archivos de Compose y ejecuta la **prueba de humo de la Fase 1** (ver abajo). También comprueba que no se haya versionado ningún secreto |
+
+Desde el **hito 1**, el CI de `platform` ya arranca el modo base con `make base` y comprueba la salud de PostgreSQL y RabbitMQ, que existan los exchanges `events` y `events.dlx` y que el usuario de `inventory` no pueda conectarse a la base `identity`. La prueba de humo completa (Identity, login y JWKS) se añade en el hito 9.
 
 ### Prueba de humo de la Fase 1
 
@@ -307,8 +315,8 @@ Cuándo se prueban: las invariantes 1 a 11, 19 a 21 y 24 en la Fase 1 (con `make
 
 ## 11. Preguntas que se resuelven en la implementación
 
-- **Versiones de PostgreSQL y RabbitMQ**, fijadas a una versión mayor concreta.
-- **Puertos publicados** de cada servicio.
+- **Versiones de PostgreSQL y RabbitMQ:** resuelto en el hito 1 (PostgreSQL 18 y RabbitMQ 4.1, fijadas por versión mayor).
+- **Puertos publicados:** resuelto en el hito 1 (solo la consola de RabbitMQ en 15672; el 5432 de PostgreSQL solo con `compose.debug.yml`).
 - **Límite o caducidad de las colas** de consumidores que dejan de ejecutarse, para evitar que acumulen mensajes sin fin. Se define al implementar el primer consumidor.
 - **Valor de N** (intentos antes de la cola de fallidos). Referencia: 5.
 - **Nombres de repositorios y perfiles:** resuelto, van en inglés (`platform`, `identity`, `reports`, `inventory`, `store`, `tickets`, perfil `full`).
