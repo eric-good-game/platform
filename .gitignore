@@ -1,0 +1,18 @@
+# Secretos generados por `make setup`: nunca se versionan (invariante 4 del documento 7)
+secrets/
+
+# Claves y certificados
+*.pem
+*.key
+*.crt
+
+# Entorno local
+.env
+.env.*
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

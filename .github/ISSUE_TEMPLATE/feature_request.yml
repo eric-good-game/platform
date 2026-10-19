@@ -1,0 +1,34 @@
+name: Propuesta
+description: Proponer una mejora o un cambio de diseño
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Qué duele hoy o qué falta.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+      description: Qué cambio propones y cómo encaja con los principios del proyecto.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Otras opciones y por qué no las prefieres.
+    validations:
+      required: false
+  - type: input
+    id: scope
+    attributes:
+      label: Fase o hito
+      description: Dónde encaja el cambio (documento 1, sección 4; documento 9).
+      placeholder: Fase 1, hito 5
+    validations:
+      required: false

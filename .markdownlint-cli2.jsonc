@@ -1,0 +1,9 @@
+{
+  // Los documentos son prosa técnica en español con tablas y enlaces largos:
+  // se permite superar la longitud de línea por defecto (MD013).
+  "config": {
+    "MD013": false
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["**/node_modules/**", "**/.git/**"]
+}
