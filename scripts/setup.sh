@@ -102,6 +102,9 @@ chmod 600 "$compose_env"
 rabbitmq_password="$(cat "$SECRETS_DIR/rabbitmq_password")"
 sed "s|__RABBITMQ_PASSWORD__|${rabbitmq_password}|" \
   "$ROOT_DIR/broker/definitions.template.json" > "$SECRETS_DIR/rabbitmq-definitions.json"
-chmod 600 "$SECRETS_DIR/rabbitmq-definitions.json"
+# El contenedor de RabbitMQ corre con un usuario sin privilegios y debe poder
+# leer este archivo: 0644. La carpeta secrets/ (0700) sigue sin ser accesible
+# para otros usuarios del equipo.
+chmod 644 "$SECRETS_DIR/rabbitmq-definitions.json"
 
 echo "Secretos listos en secrets/."

@@ -72,6 +72,9 @@ jobs:
         run: make base
       - name: Check health, broker and database isolation
         run: make check
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose --env-file envs/base.env --env-file secrets/compose.env logs
       - name: Tear down
         if: always()
         run: make reset
