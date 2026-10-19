@@ -37,8 +37,14 @@ Ejemplos válidos:
 
 ```bash
 npx --yes markdownlint-cli2@0.18.0
-npx --yes yaml-lint@1.7.0 '.github/**/*.{yml,yaml}'
+npx --yes yaml-lint@1.7.0 '.github/**/*.{yml,yaml}' docker-compose.yml compose.debug.yml
 node scripts/check-repo.mjs
+```
+
+Solo en `platform`, con Docker en marcha, además:
+
+```bash
+make setup && make validate && make base && make check && make reset
 ```
 
 ## Hitos

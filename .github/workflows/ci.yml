@@ -55,6 +55,26 @@ jobs:
       - name: Markdown
         run: npx --yes markdownlint-cli2@0.18.0
       - name: YAML
-        run: npx --yes yaml-lint@1.7.0 '.github/**/*.{yml,yaml}'
+        run: npx --yes yaml-lint@1.7.0 '.github/**/*.{yml,yaml}' docker-compose.yml compose.debug.yml
       - name: Repository checks
         run: node scripts/check-repo.mjs
+
+  compose:
+    name: compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Generate secrets
+        run: make setup
+      - name: Validate the Compose file
+        run: make validate
+      - name: Start the base platform
+        run: make base
+      - name: Check health, broker and database isolation
+        run: make check
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose --env-file envs/base.env --env-file secrets/compose.env logs
+      - name: Tear down
+        if: always()
+        run: make reset

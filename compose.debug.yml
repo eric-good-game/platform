@@ -1,0 +1,6 @@
+# Expone PostgreSQL en localhost para depuración (documento 7, sección 3).
+# Uso: make debug
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"

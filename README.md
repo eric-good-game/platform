@@ -2,7 +2,7 @@
 
 Infraestructura y documentación transversal del portafolio. Este repositorio reúne lo que comparten todos los servicios: los modos de ejecución, PostgreSQL y RabbitMQ, los secretos, la prueba de humo de la Fase 1 y los documentos de diseño.
 
-Estado: **hito 0 completado**. El siguiente es el hito 1 (plataforma base): `docker-compose` y `Makefile` para levantar PostgreSQL y RabbitMQ.
+Estado: **hito 1 completado**. El siguiente es el hito 2 (esqueleto de Identity), en el repositorio `identity`.
 
 ## Qué habrá aquí
 
@@ -15,6 +15,20 @@ Estado: **hito 0 completado**. El siguiente es el hito 1 (plataforma base): `doc
 | `db/init/` | Creación de bases y usuarios de PostgreSQL | 1 |
 | `broker/` | Definición del exchange `events` y de `events.dlx` | 1 |
 | `secrets/` | Secretos generados por `make setup`. **Ignorado por Git** | 1 |
+
+## Cómo se usa
+
+```bash
+make setup   # genera los secretos en secrets/ (idempotente)
+make base    # levanta PostgreSQL y RabbitMQ y espera a que estén sanos
+make check   # comprueba salud, exchanges y aislamiento de las bases
+make debug   # como base, con PostgreSQL expuesto en localhost:5432
+make down    # detiene los contenedores
+make reset   # detiene y borra los datos
+make logs    # sigue los registros
+```
+
+La consola web de RabbitMQ queda en `http://localhost:15672` (usuario `portfolio`; la contraseña está en `secrets/rabbitmq_password`). Los datos de demostración usan la contraseña pública `Demo.Password.2026`.
 
 ## Para qué sirve
 
@@ -31,7 +45,7 @@ Estado: **hito 0 completado**. El siguiente es el hito 1 (plataforma base): `doc
 
 ## Requisitos locales
 
-Verificados en el hito 0:
+Verificados en los hitos 0 y 1:
 
 | Herramienta | Versión mínima | Comprobado con |
 |---|---|---|

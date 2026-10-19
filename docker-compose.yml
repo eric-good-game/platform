@@ -1,0 +1,59 @@
+# Plataforma base (hito 1): PostgreSQL y RabbitMQ.
+# Documento 7. Los perfiles y los demás servicios se añaden en las fases siguientes.
+name: portfolio
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?ejecuta make setup antes de arrancar}
+      POSTGRES_DB: postgres
+      # Contraseñas de los usuarios de las bases; las usa db/init/01-databases.sh.
+      DB_IDENTITY_PASSWORD: ${DB_IDENTITY_PASSWORD:?ejecuta make setup antes de arrancar}
+      DB_INVENTORY_PASSWORD: ${DB_INVENTORY_PASSWORD:?ejecuta make setup antes de arrancar}
+      DB_STORE_PASSWORD: ${DB_STORE_PASSWORD:?ejecuta make setup antes de arrancar}
+      DB_REPORTS_PASSWORD: ${DB_REPORTS_PASSWORD:?ejecuta make setup antes de arrancar}
+      DB_TICKETS_PASSWORD: ${DB_TICKETS_PASSWORD:?ejecuta make setup antes de arrancar}
+    volumes:
+      # PostgreSQL 18 guarda los datos en /var/lib/postgresql/18/docker.
+      - postgres-data:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - platform
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    hostname: rabbitmq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # Generado por `make setup`: define el usuario y los exchanges.
+      - ./secrets/rabbitmq-definitions.json:/etc/rabbitmq/definitions.json:ro
+    ports:
+      # Solo se publica la consola web; AMQP (5672) queda en la red interna.
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks:
+      - platform
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+
+networks:
+  platform:
+    driver: bridge

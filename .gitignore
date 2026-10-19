@@ -9,6 +9,7 @@ secrets/
 # Entorno local
 .env
 .env.*
+!.env.example
 
 # Sistema y editores
 .DS_Store
