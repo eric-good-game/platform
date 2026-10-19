@@ -2,7 +2,7 @@
 
 Infraestructura y documentación transversal del portafolio. Este repositorio reúne lo que comparten todos los servicios: los modos de ejecución, PostgreSQL y RabbitMQ, los secretos, la prueba de humo de la Fase 1 y los documentos de diseño.
 
-Estado: **hito 0 (preparación)**. Todavía no hay `docker-compose` ni `Makefile`; llegan en el hito 1.
+Estado: **hito 0 completado**. El siguiente es el hito 1 (plataforma base): `docker-compose` y `Makefile` para levantar PostgreSQL y RabbitMQ.
 
 ## Qué habrá aquí
 
